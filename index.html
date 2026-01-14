@@ -28,6 +28,7 @@ body {
 }
 .input-box {
   display: flex;
+  gap: 5px;
 }
 input {
   flex: 1;
@@ -41,20 +42,29 @@ button {
 
 <body>
 
-<div class="input-box">
-  <input id="text" placeholder="Ketik pesan...">
-  <button id="send">Kirim</button>
-  <button id="clear">Clear</button>
-</div>
+<div class="chat-box">
+  <div class="messages" id="messages"></div>
 
+  <div class="input-box">
+    <input id="text" placeholder="Ketik pesan...">
+    <button id="send">Kirim</button>
+    <button id="clear">Clear</button>
+  </div>
+</div>
 
 <!-- FIREBASE REALTIME DATABASE -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-  import { getDatabase, ref, push, onChildAdded }
-    from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
+  import {
+    getDatabase,
+    ref,
+    push,
+    onChildAdded,
+    remove,
+    onValue
+  } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
 
-  // CONFIG PUNYA KAMU
+  // CONFIG FIREBASE KAMU
   const firebaseConfig = {
     apiKey: "AIzaSyD0q-Rcj7pmA3dw9ztx4hGTjYYoQmboTdY",
     authDomain: "ryzen-chat.firebaseapp.com",
@@ -89,6 +99,20 @@ button {
     div.className = "msg";
     div.innerText = snapshot.val().msg;
     document.getElementById("messages").appendChild(div);
+  });
+
+  // CLEAR CHAT (REALTIME)
+  document.getElementById("clear").onclick = () => {
+    if (confirm("Hapus semua chat?")) {
+      remove(chatRef);
+    }
+  };
+
+  // JIKA DATABASE KOSONG, BERSIHKAN LAYAR
+  onValue(chatRef, (snapshot) => {
+    if (!snapshot.exists()) {
+      document.getElementById("messages").innerHTML = "";
+    }
   });
 </script>
 
