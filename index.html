@@ -2,7 +2,8 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>SMS Chat</title>
+<title>SMS Chat Realtime</title>
+
 <style>
 body {
   font-family: Arial;
@@ -23,10 +24,7 @@ body {
   padding: 8px;
   margin: 5px;
   border-radius: 8px;
-}
-.me {
   background: #dcf8c6;
-  text-align: right;
 }
 .input-box {
   display: flex;
@@ -40,25 +38,59 @@ button {
 }
 </style>
 </head>
+
 <body>
 
 <div class="chat-box">
   <div class="messages" id="messages"></div>
   <div class="input-box">
     <input id="text" placeholder="Ketik pesan...">
-    <button onclick="send()">Kirim</button>
+    <button id="send">Kirim</button>
   </div>
 </div>
 
-<script>
-function send() {
-  let text = document.getElementById("text");
-  let msg = document.createElement("div");
-  msg.className = "msg me";
-  msg.innerText = text.value;
-  document.getElementById("messages").appendChild(msg);
-  text.value = "";
-}
+<!-- FIREBASE REALTIME DATABASE -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+  import { getDatabase, ref, push, onChildAdded }
+    from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
+
+  // CONFIG PUNYA KAMU
+  const firebaseConfig = {
+    apiKey: "AIzaSyD0q-Rcj7pmA3dw9ztx4hGTjYYoQmboTdY",
+    authDomain: "ryzen-chat.firebaseapp.com",
+    databaseURL: "https://ryzen-chat-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "ryzen-chat",
+    storageBucket: "ryzen-chat.firebasestorage.app",
+    messagingSenderId: "185118210850",
+    appId: "1:185118210850:web:468087b534573bfcdf437b"
+  };
+
+  // INIT FIREBASE
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const chatRef = ref(db, "chat");
+
+  // KIRIM PESAN
+  document.getElementById("send").onclick = () => {
+    const text = document.getElementById("text").value;
+    if (text === "") return;
+
+    push(chatRef, {
+      msg: text,
+      time: Date.now()
+    });
+
+    document.getElementById("text").value = "";
+  };
+
+  // TERIMA PESAN REALTIME
+  onChildAdded(chatRef, (snapshot) => {
+    const div = document.createElement("div");
+    div.className = "msg";
+    div.innerText = snapshot.val().msg;
+    document.getElementById("messages").appendChild(div);
+  });
 </script>
 
 </body>
