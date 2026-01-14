@@ -1,63 +1,129 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>SMS Chat Realtime</title>
+<title>Ryzen Chat GPT</title>
 
 <style>
 body {
-  font-family: Arial;
-  background: #e5ddd5;
+  font-family: Arial, sans-serif;
+  background: #ece5dd;
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
 }
-.chat-box {
-  max-width: 400px;
-  margin: auto;
-  background: white;
-  padding: 10px;
+.chat-container {
+  width: 400px;
+  background: #fff;
   border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  box-shadow: 0 0 10px rgba(0,0,0,0.2);
+}
+.header {
+  padding: 10px;
+  background: #075e54;
+  color: #fff;
+  font-weight: bold;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+  text-align: center;
 }
 .messages {
-  height: 300px;
+  flex: 1;
+  padding: 10px;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 .msg {
+  max-width: 70%;
   padding: 8px;
-  margin: 5px;
-  border-radius: 8px;
+  margin: 5px 0;
+  border-radius: 10px;
+  word-wrap: break-word;
+}
+.msg.me {
   background: #dcf8c6;
+  align-self: flex-end;
+}
+.msg.other {
+  background: #fff;
+  align-self: flex-start;
+  border: 1px solid #ccc;
+}
+.msg img {
+  max-width: 100%;
+  border-radius: 10px;
+  margin-top: 5px;
 }
 .input-box {
   display: flex;
+  padding: 10px;
   gap: 5px;
+  background: #f0f0f0;
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
 }
-input {
+input[type="text"] {
   flex: 1;
   padding: 8px;
+  border-radius: 20px;
+  border: 1px solid #ccc;
+}
+input[type="file"] {
+  display: none;
 }
 button {
-  padding: 8px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 20px;
+  background: #075e54;
+  color: white;
+  cursor: pointer;
+}
+button:hover {
+  background: #128c7e;
+}
+.user-name {
+  text-align: center;
+  margin: 10px 0;
+  font-weight: bold;
+  color: #075e54;
 }
 </style>
 </head>
 
 <body>
 
-<div class="chat-box">
+<div class="chat-container">
+
+  <div class="header">Ryzen Chat GPT</div>
+
+  <div class="user-name" id="userNameDisplay"></div>
+
   <div class="messages" id="messages"></div>
 
   <div class="input-box">
-    <input id="text" placeholder="Ketik pesan...">
+    <input id="text" type="text" placeholder="Ketik pesan...">
+    <label for="imageBtn" style="background:#128c7e; color:white; padding:8px 12px; border-radius:20px; cursor:pointer;">📸</label>
+    <input id="imageBtn" type="file" accept="image/*">
     <button id="send">Kirim</button>
     <button id="clear">Clear</button>
   </div>
 </div>
 
-<!-- 🔥 SCRIPT FIREBASE (WAJIB MODULE) -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getDatabase, ref, push, onChildAdded, remove }
+import { getDatabase, ref, push, onChildAdded, remove, onValue } 
   from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
+import { getStorage, ref as sRef, uploadBytes, getDownloadURL } 
+  from "https://www.gstatic.com/firebasejs/12.7.0/firebase-storage.js";
 
+// ===== FIREBASE CONFIG =====
 const firebaseConfig = {
   apiKey: "AIzaSyD0q-Rcj7pmA3dw9ztx4hGTjYYoQmboTdY",
   authDomain: "ryzen-chat.firebaseapp.com",
@@ -68,36 +134,95 @@ const firebaseConfig = {
   appId: "1:185118210850:web:468087b534573bfcdf437b"
 };
 
+// ===== INIT FIREBASE =====
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const chatRef = ref(db, "chat");
+const storage = getStorage(app);
 
-// ✅ KIRIM PESAN
-document.getElementById("send").onclick = () => {
-  const input = document.getElementById("text");
-  if (input.value === "") return;
+// ===== LOGIN SEDERHANA =====
+let userName = localStorage.getItem("chatUser");
+if(!userName) {
+  userName = prompt("Masukkan nama kamu:");
+  if(!userName) userName = "Anon";
+  localStorage.setItem("chatUser", userName);
+}
+document.getElementById("userNameDisplay").innerText = "Kamu: " + userName;
 
-  push(chatRef, {
-    msg: input.value,
-    time: Date.now()
-  });
+// ===== KIRIM PESAN / FOTO =====
+document.getElementById("send").onclick = async () => {
+  const text = document.getElementById("text").value;
+  const file = document.getElementById("imageBtn").files[0];
 
-  input.value = "";
+  if(file){
+    const imgRef = sRef(storage, "images/"+Date.now()+"_"+file.name);
+    await uploadBytes(imgRef, file);
+    const url = await getDownloadURL(imgRef);
+
+    push(chatRef, {
+      user: userName,
+      img: url,
+      time: Date.now()
+    });
+
+    document.getElementById("imageBtn").value = "";
+  }
+
+  if(text.trim() !== ""){
+    push(chatRef, {
+      user: userName,
+      msg: text,
+      time: Date.now()
+    });
+    document.getElementById("text").value = "";
+  }
 };
 
-// ✅ TERIMA PESAN REALTIME
-onChildAdded(chatRef, (snap) => {
+// ===== TERIMA PESAN REALTIME =====
+onChildAdded(chatRef, (snapshot) => {
+  const data = snapshot.val();
   const div = document.createElement("div");
-  div.className = "msg";
-  div.innerText = snap.val().msg;
+  div.className = "msg " + (data.user === userName ? "me" : "other");
+
+  // Nama pengirim
+  const sender = document.createElement("div");
+  sender.style.fontSize="12px";
+  sender.style.fontWeight="bold";
+  sender.style.marginBottom="3px";
+  sender.innerText = data.user;
+  div.appendChild(sender);
+
+  // Pesan teks
+  if(data.msg){
+    const textDiv = document.createElement("div");
+    textDiv.innerText = data.msg;
+    div.appendChild(textDiv);
+  }
+
+  // Pesan gambar
+  if(data.img){
+    const img = document.createElement("img");
+    img.src = data.img;
+    div.appendChild(img);
+  }
+
   document.getElementById("messages").appendChild(div);
+  document.getElementById("messages").scrollTop = document.getElementById("messages").scrollHeight;
 });
 
-// ✅ CLEAR CHAT
+// ===== CLEAR CHAT =====
 document.getElementById("clear").onclick = () => {
-  remove(chatRef);
-  document.getElementById("messages").innerHTML = "";
+  if(confirm("Hapus semua chat?")){
+    remove(chatRef);
+  }
 };
+
+// ===== BERSIHKAN LAYAR JIKA DATABASE KOSONG =====
+onValue(chatRef, (snapshot)=>{
+  if(!snapshot.exists()){
+    document.getElementById("messages").innerHTML = "";
+  }
+});
 </script>
 
 </body>
