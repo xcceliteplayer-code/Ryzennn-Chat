@@ -55,11 +55,6 @@ body {
   align-self: flex-start;
   border: 1px solid #ccc;
 }
-.msg img {
-  max-width: 100%;
-  border-radius: 10px;
-  margin-top: 5px;
-}
 .input-box {
   display: flex;
   padding: 10px;
@@ -73,9 +68,6 @@ input[type="text"] {
   padding: 8px;
   border-radius: 20px;
   border: 1px solid #ccc;
-}
-input[type="file"] {
-  display: none;
 }
 button {
   padding: 8px 12px;
@@ -109,8 +101,6 @@ button:hover {
 
   <div class="input-box">
     <input id="text" type="text" placeholder="Ketik pesan...">
-    <label for="imageBtn" style="background:#128c7e; color:white; padding:8px 12px; border-radius:20px; cursor:pointer;">📸</label>
-    <input id="imageBtn" type="file" accept="image/*">
     <button id="send">Kirim</button>
     <button id="clear">Clear</button>
   </div>
@@ -120,8 +110,6 @@ button:hover {
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
 import { getDatabase, ref, push, onChildAdded, remove, onValue } 
   from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
-import { getStorage, ref as sRef, uploadBytes, getDownloadURL } 
-  from "https://www.gstatic.com/firebasejs/12.7.0/firebase-storage.js";
 
 // ===== FIREBASE CONFIG =====
 const firebaseConfig = {
@@ -138,7 +126,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const chatRef = ref(db, "chat");
-const storage = getStorage(app);
 
 // ===== LOGIN SEDERHANA =====
 let userName = localStorage.getItem("chatUser");
@@ -149,33 +136,17 @@ if(!userName) {
 }
 document.getElementById("userNameDisplay").innerText = "Kamu: " + userName;
 
-// ===== KIRIM PESAN / FOTO =====
-document.getElementById("send").onclick = async () => {
-  const text = document.getElementById("text").value;
-  const file = document.getElementById("imageBtn").files[0];
+// ===== KIRIM PESAN =====
+document.getElementById("send").onclick = () => {
+  const text = document.getElementById("text").value.trim();
+  if(text === "") return;
 
-  if(file){
-    const imgRef = sRef(storage, "images/"+Date.now()+"_"+file.name);
-    await uploadBytes(imgRef, file);
-    const url = await getDownloadURL(imgRef);
-
-    push(chatRef, {
-      user: userName,
-      img: url,
-      time: Date.now()
-    });
-
-    document.getElementById("imageBtn").value = "";
-  }
-
-  if(text.trim() !== ""){
-    push(chatRef, {
-      user: userName,
-      msg: text,
-      time: Date.now()
-    });
-    document.getElementById("text").value = "";
-  }
+  push(chatRef, {
+    user: userName,
+    msg: text,
+    time: Date.now()
+  });
+  document.getElementById("text").value = "";
 };
 
 // ===== TERIMA PESAN REALTIME =====
@@ -184,7 +155,6 @@ onChildAdded(chatRef, (snapshot) => {
   const div = document.createElement("div");
   div.className = "msg " + (data.user === userName ? "me" : "other");
 
-  // Nama pengirim
   const sender = document.createElement("div");
   sender.style.fontSize="12px";
   sender.style.fontWeight="bold";
@@ -192,19 +162,9 @@ onChildAdded(chatRef, (snapshot) => {
   sender.innerText = data.user;
   div.appendChild(sender);
 
-  // Pesan teks
-  if(data.msg){
-    const textDiv = document.createElement("div");
-    textDiv.innerText = data.msg;
-    div.appendChild(textDiv);
-  }
-
-  // Pesan gambar
-  if(data.img){
-    const img = document.createElement("img");
-    img.src = data.img;
-    div.appendChild(img);
-  }
+  const textDiv = document.createElement("div");
+  textDiv.innerText = data.msg;
+  div.appendChild(textDiv);
 
   document.getElementById("messages").appendChild(div);
   document.getElementById("messages").scrollTop = document.getElementById("messages").scrollHeight;
