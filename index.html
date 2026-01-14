@@ -47,11 +47,11 @@ body {
   word-wrap: break-word;
 }
 .msg.me {
-  background: #dcf8c6;
+  background: #dcf8c6; /* hijau pesan kita */
   align-self: flex-end;
 }
 .msg.other {
-  background: #fff;
+  background: #fff; /* putih pesan teman */
   align-self: flex-start;
   border: 1px solid #ccc;
 }
@@ -127,7 +127,7 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const chatRef = ref(db, "chat");
 
-// ===== LOGIN SEDERHANA =====
+// ===== LOGIN SIMPLE =====
 let userName = localStorage.getItem("chatUser");
 if(!userName) {
   userName = prompt("Masukkan nama kamu:");
