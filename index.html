@@ -26,15 +26,11 @@ body {
   border-radius: 8px;
   background: #dcf8c6;
 }
-.msg img {
-  max-width: 100%;
-  border-radius: 8px;
-}
 .input-box {
   display: flex;
   gap: 5px;
 }
-input[type="text"] {
+input {
   flex: 1;
   padding: 8px;
 }
@@ -50,109 +46,58 @@ button {
   <div class="messages" id="messages"></div>
 
   <div class="input-box">
-    <input id="text" type="text" placeholder="Ketik pesan...">
-    <input id="image" type="file" accept="image/*">
+    <input id="text" placeholder="Ketik pesan...">
     <button id="send">Kirim</button>
     <button id="clear">Clear</button>
   </div>
 </div>
 
+<!-- 🔥 SCRIPT FIREBASE (WAJIB MODULE) -->
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-  import {
-    getDatabase,
-    ref,
-    push,
-    onChildAdded,
-    remove,
-    onValue
-  } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+import { getDatabase, ref, push, onChildAdded, remove }
+  from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
 
-  import {
-    getStorage,
-    ref as sRef,
-    uploadBytes,
-    getDownloadURL
-  } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-storage.js";
+const firebaseConfig = {
+  apiKey: "AIzaSyD0q-Rcj7pmA3dw9ztx4hGTjYYoQmboTdY",
+  authDomain: "ryzen-chat.firebaseapp.com",
+  databaseURL: "https://ryzen-chat-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "ryzen-chat",
+  storageBucket: "ryzen-chat.firebasestorage.app",
+  messagingSenderId: "185118210850",
+  appId: "1:185118210850:web:468087b534573bfcdf437b"
+};
 
-  // CONFIG FIREBASE
-  const firebaseConfig = {
-    apiKey: "AIzaSyD0q-Rcj7pmA3dw9ztx4hGTjYYoQmboTdY",
-    authDomain: "ryzen-chat.firebaseapp.com",
-    databaseURL: "https://ryzen-chat-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "ryzen-chat",
-    storageBucket: "ryzen-chat.firebasestorage.app",
-    messagingSenderId: "185118210850",
-    appId: "1:185118210850:web:468087b534573bfcdf437b"
-  };
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const chatRef = ref(db, "chat");
 
-  // INIT
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-  const chatRef = ref(db, "chat");
-  const storage = getStorage(app);
+// ✅ KIRIM PESAN
+document.getElementById("send").onclick = () => {
+  const input = document.getElementById("text");
+  if (input.value === "") return;
 
-  // KIRIM PESAN / FOTO
-  document.getElementById("send").onclick = async () => {
-    const text = document.getElementById("text").value;
-    const file = document.getElementById("image").files[0];
-
-    // JIKA KIRIM FOTO
-    if (file) {
-      const imgRef = sRef(storage, "images/" + Date.now() + "_" + file.name);
-      await uploadBytes(imgRef, file);
-      const url = await getDownloadURL(imgRef);
-
-      push(chatRef, {
-        img: url,
-        time: Date.now()
-      });
-
-      document.getElementById("image").value = "";
-    }
-
-    // JIKA KIRIM TEKS
-    if (text !== "") {
-      push(chatRef, {
-        msg: text,
-        time: Date.now()
-      });
-      document.getElementById("text").value = "";
-    }
-  };
-
-  // TERIMA PESAN REALTIME
-  onChildAdded(chatRef, (snapshot) => {
-    const data = snapshot.val();
-    const div = document.createElement("div");
-    div.className = "msg";
-
-    if (data.msg) {
-      div.innerText = data.msg;
-    }
-
-    if (data.img) {
-      const img = document.createElement("img");
-      img.src = data.img;
-      div.appendChild(img);
-    }
-
-    document.getElementById("messages").appendChild(div);
+  push(chatRef, {
+    msg: input.value,
+    time: Date.now()
   });
 
-  // CLEAR CHAT
-  document.getElementById("clear").onclick = () => {
-    if (confirm("Hapus semua chat?")) {
-      remove(chatRef);
-    }
-  };
+  input.value = "";
+};
 
-  // BERSIHKAN LAYAR JIKA DATABASE KOSONG
-  onValue(chatRef, (snapshot) => {
-    if (!snapshot.exists()) {
-      document.getElementById("messages").innerHTML = "";
-    }
-  });
+// ✅ TERIMA PESAN REALTIME
+onChildAdded(chatRef, (snap) => {
+  const div = document.createElement("div");
+  div.className = "msg";
+  div.innerText = snap.val().msg;
+  document.getElementById("messages").appendChild(div);
+});
+
+// ✅ CLEAR CHAT
+document.getElementById("clear").onclick = () => {
+  remove(chatRef);
+  document.getElementById("messages").innerHTML = "";
+};
 </script>
 
 </body>
